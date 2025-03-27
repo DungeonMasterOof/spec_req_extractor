@@ -1,11 +1,12 @@
 #!/bin/bash
 # Parsing build requires and requires from a spec file
 
+set -e
 echo "Welcome! I need the spec file(s) from you."
 echo "Write d for directory or f for single file:"
 read char
 if [ "$char" == "d" ]; then
-	echo "Write a directory of spec files:"
+	echo "Write a path to directory of spec files:"
 	read dirname
 
 	if [ -e $dirname ]; then
@@ -21,7 +22,7 @@ if [ "$char" == "d" ]; then
 	fi
 
 elif [ "$char" == "f" ]; then
-	echo "Write a name of spec file:"
+	echo "Write a path to spec file:"
 	read filename
 	rpmspec -q --buildrequires $filename >> br.out
 	rpmspec -q --requires $filename >> r.out
@@ -30,3 +31,7 @@ else # Not d and not f
 	echo "Error: wrong input"
 	exit 1
 fi
+
+echo " "
+python3 ./task.py 
+

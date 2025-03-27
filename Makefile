@@ -1,4 +1,4 @@
-test:
+run:
 	./script.sh
 
 clean:

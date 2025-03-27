@@ -10,13 +10,16 @@ def proc(graph, packet_name, filename, verflag): # Обработка графа
     i = 0
     for line in file.readlines():
         # line = escape('"' + line + '"')
+
+        line = line.strip()
+        if (line.startswith("(")) and (line.endswith(")")): # Удаляем некрасивые скобки при условиях
+            line = line[1:-1]
+
         if verflag: # Хотим указывать версии на рёбрах
-            ind = line.find('=') # Версии зависимостей указывают после знака =
+            ind = line.find(' ') # Версии зависимостей указывают после пробела
             if ind != -1: # Указана версия
                 version = line[(ind+1):] # Запоминаем версию
-                line = line[:ind] # Забываем обо всём до = (включительно)
-                if line[-1] == ' ':
-                    line = line[:-1]
+                line = line[:ind] # Забываем обо всём до пробела (включительно)
                 graph.node(str(i), line)
                 graph.edge('packet', str(i), version) # Делаем пометку на ребре о версии
             else: # Версия не указана
@@ -29,7 +32,7 @@ def proc(graph, packet_name, filename, verflag): # Обработка графа
 
         i += 1
 
-    graph.attr(rankdir='TB')
+    graph.attr(rankdir='LR')
 
     # Выводим граф в файл и на экран
     output_path = graph.render(filename=graph.name, view=True)  # Создаём в качестве файла наш граф
