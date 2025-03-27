@@ -19,8 +19,14 @@ After that the script launches **task.py**
 ### task.py
 A python module to take the data from the script and to use Graphviz Python API for  creating graphs that the user will receive. It has a function named **proc** for processing the graph creation:
 `proc(graph, packet_name, filename, verflag)`
-It receives *graph* - Graphviz API class that is used for graph declaration  
-*packet_name* - string that contains packet name. It is written by the user, and is used in graph's root. **Note**: For example, python-3 or LibreOffice packets use multiple spec files. That's why it is important to receive name from the user, because it may be unclear what spec has the right name for the packet.  
+It receives: *graph* - Graphviz API class that is used for graph declaration  
+
+*packet_name* - string that contains packet name. It is written by the user, and is used in graph's root. 
+**Note**: For example, python-3 or LibreOffice packets use multiple spec files. That's why it is important to receive name from the user, because it may be unclear what spec has the right name for the packet.  
+
 *filename* - name of the file that had been made by the script. Should be synced with graph's purpose (br.out for build requirements, r.out for runtime requirements)
-*verflag* - flag for labeling the edges with the versions of required packets instead of leaving it in the nodes. For example, *cmake-data = 3.28.3-7* with verflag = True will be transformed into **"cmake-data" node** and **"= 3.28.3-7" label** on the edge.  
+
+*verflag* - flag for labeling the edges with the versions of required packets instead of leaving it in the nodes.
+For example, *cmake-data = 3.28.3-7* with verflag = True will be transformed into **"cmake-data" node** and **"= 3.28.3-7" label** on the edge.  
+
 Also, if there is a condition for having a requirement, for example, *(cmake-rpm-macros = 3.28.3-7 if rpm-build)*, then the parentheses are removed, and future result depends on verflag, mentioned before.
