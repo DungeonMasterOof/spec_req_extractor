@@ -10,6 +10,9 @@ def proc(graph, packet_name, filename, verflag): # Обработка графа
     i = 0
     for line in file.readlines():
         # line = escape('"' + line + '"')
+        if line.startswith('(') and line.endswith(')'):
+            line = line[1:-1]
+
         if verflag: # Хотим указывать версии на рёбрах
             ind = line.find('=') # Версии зависимостей указывают после знака =
             if ind != -1: # Указана версия
