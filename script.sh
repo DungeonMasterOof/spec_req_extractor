@@ -5,17 +5,23 @@ set -e
 echo "Welcome! I need the spec file(s) from you."
 echo "Write d for directory or f for single file:"
 read char
+
+curdir=$(dirname $(realpath "$0"))
+
 if [ "$char" == "d" ]; then
 	echo "Write a path to directory of spec files:"
 	read dirname
 
 	if [ -e $dirname ]; then
-		for filename in $dirname/*
+		cd "$dirname"
+
+		for filename in ./*.spec
 		do
 			echo "Processing $filename file..."
-		        rpmspec -q --buildrequires $filename >> br.out
-		        rpmspec -q --requires $filename >> r.out
+		        rpmspec -q --buildrequires $filename >> $curdir/br.out
+		        rpmspec -q --requires $filename >> $curdir/r.out
 		done
+		cd "$curdir"
 	else
 		echo "Error: $dirname does not exist."
 		exit 1
@@ -24,8 +30,17 @@ if [ "$char" == "d" ]; then
 elif [ "$char" == "f" ]; then
 	echo "Write a path to spec file:"
 	read filename
-	rpmspec -q --buildrequires $filename >> br.out
-	rpmspec -q --requires $filename >> r.out
+	if [ -e $filename ]; then
+		filedir=$(dirname $(realpath "$filename"))
+		cd $filedir
+		filename=$(basename "$filename")
+		rpmspec -q --buildrequires $filename >> $curdir/br.out
+		rpmspec -q --requires $filename >> $curdir/r.out
+		cd $curdir
+	else
+		echo "Error: $filename does not exist."
+		exit 1
+	fi
 
 else # Not d and not f
 	echo "Error: wrong input"

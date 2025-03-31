@@ -1,8 +1,10 @@
 run:
 	./script.sh
+	rm r.out
+	rm br.out
 
 clean:
-	rm *.out
+	# rm *.out
 	rm build_requires
 	rm runtime_requires
 	rm *.png
