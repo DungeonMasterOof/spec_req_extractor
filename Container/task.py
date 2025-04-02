@@ -43,6 +43,7 @@ def proc(graph, packet_name, filename, verflag): # Обработка графа
 
     # Выводим граф в файл и на экран
     output_path = out.render(filename=f'{graph.name}')  # Создаём в качестве файла наш граф
+    # НЕ ВЫВОДИМ В КОНТЕЙНЕРЕ НИЧЕГО, БУДЕМ КОПИРОВАТЬ САМИ
     print("Был создан граф:", output_path)
 
 
