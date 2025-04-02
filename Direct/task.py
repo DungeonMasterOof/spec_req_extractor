@@ -16,14 +16,14 @@ def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка гра�
     rr = "Requires"
     pm = "%package"
     newspec = "%mainpackage" # Наша договорённость о том, как отмечаются в pkg.out новые spec файлы
-    speccount = 1 # Количество обработанных spec файлов. Имеет роль для директив с 2 и более spec файлами
-    comment = str()
-    parsed = file.readlines()
-    pkg = packet_name
+    speccount = 0 # Количество обработанных spec файлов. Имеет роль для директив с 2 и более spec файлами, иначе не влияет
 
+    parsed = file.readlines()
+
+    pkg = packet_name
     graph.node('p0', pkg, shape='egg', color='red')
     graph.edge('packet', 'p0', "main package")
-    pkgid = 0
+    pkgid = 0 # Сначала идёт += 1 => первый айди в проге далее будет 1
     pkgnode = 'p0'
 
 
@@ -35,7 +35,7 @@ def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка гра�
     # апострофы, где они есть.
     # Обычно же, без этой опции, подразумевается, что "пустой" подпакет <=> все зависимости из главного пакета
     mainlst = []
-    mainpkgnode = 'p0'
+    mainpkgnode = 'p1'
     reqcount = 0
     '''
 
@@ -75,6 +75,7 @@ def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка гра�
 
             reqcount += 1
             '''
+            i += 1
 
         elif (line.startswith(rr)) and graphname == "runtime_requires":
             line = line[len(rr):] # Избавляемся от строки rr
@@ -112,6 +113,7 @@ def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка гра�
 
             reqcount += 1
             '''
+            i += 1
 
         elif line.startswith(pm):
             '''
@@ -137,19 +139,23 @@ def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка гра�
             pkgnode = f'p{pkgid}'
             graph.node(pkgnode, pkg, shape='egg', color='red')
             graph.edge('packet', pkgnode)
+
         elif line.startswith(newspec):
-            pkg = f'{packet_name}:{speccount}'
+            if speccount != 0:
+                pkgid += 1
+                pkg = f'{packet_name}:{speccount}'
+                pkgnode = f'p{pkgid}'
+                graph.node(pkgnode, pkg, shape='egg', color='red')
+                graph.edge('packet', pkgnode, f"main package:{speccount}")
 
-            pkgid += 1
-            pkgnode = f'p{pkgid}'
-
-            graph.node(pkgnode, pkg, shape='egg', color='red')
-            graph.edge('packet', pkgnode, f"main package:{speccount}")
+                '''
+                mainpkgnode = pkgnode
+                mainlst.clear()
+                '''
 
             speccount += 1
-
-        i += 1
-
+        else:
+            continue
 
 
     graph.attr(rankdir='LR')
@@ -158,6 +164,7 @@ def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка гра�
 
     # Выводим граф в файл и на экран
     output_path = out.render(filename=f'{graph.name}', view=True)  # Создаём в качестве файла наш граф
+
     print("Был создан граф:", output_path)
 
 
