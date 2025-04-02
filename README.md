@@ -1,5 +1,5 @@
 # Spec data extractor
-The main goal of the program is to extract requirements and build requirements fields from a spec file or a set of spec files (located in one directory). There is a Makefile to make everything simpler and more convenient.  
+The main goal of the program is to extract requirements and build requirements fields from a spec file or a set of spec files (located in one directory). They will be described as two graphs as the result of the program. Graphs will be directed and will show main package and subpackages dependencies. **IMPORTANT: If a subpackage does not have any edges, it is meant that it has the same dependencies as the main package (RPM standard). See task.py for more info.** Finally, there is a Makefile to make everything simpler and more convenient.  
 You may notice two directives: Direct and Container. Direct is the lighter version of the program but is less unified. It just uses your system, your system's macro definitions in particular. Container directive is more sophisticated and uses Docker containers with set image.  
 **Note: If you want to change the image (depends on your rpm packets), you should change ${container_name} in *run.sh* and *copy.sh* and change image in *Dockerfile*. You should have respective image installed.**  
 The description of each file is below.  
@@ -18,20 +18,21 @@ Makefile has options to start the program and to clean everything after its work
 `clean` - cleanpng, cleangraph and cleanout respectively  
 
 ### script.sh
-A bash script to collect requires and build requires data from spec files. It uses
-`rpmspec -q --buildrequires >> br.out` for requires during build and
-`rpmspec -q --requires >> r.out` for requires during runtime.  
-After that the script launches **task.py**.
+A bash script to collect packages, their requires and build requires data from spec files. It uses
+`rpmspec -P gcc.spec | grep -e %package -e BuildRequires -e Requires >> pkg.out` (or >) for grabbing everything we may use into pkg.out file.  
+**Note:** If you choose querying a directive, then the script will add an information about the next spec file into the pkg.out through `echo "%mainpackage" >> pkg.out`. That is an agreement that doesn't correlate with other sections and descriptions. After that the script launches **task.py**.  
 **Note: rpmspec may write warnings, but it is okay, if they are not related to macros, requires and buildrequires. Otherwise the information *may be* inaccurate, try changing the system distributive / container image. The 2nd way is described lower.**  
 
 ### task.py
-A python module to take the data from the script and to use Graphviz Python API for  creating graphs that the user will receive. It has a function named **proc** for processing the graph creation:
-`proc(graph, packet_name, filename, verflag)`
+A python module to take the data from the script and to use Graphviz Python API for creating graphs that the user will receive. Graphs are directed and have different colors and shapes for root node, subpackages and dependencies. If a subpackage has no edges, it is meant that it has dependencies equal to main package (see **Note 2**). Otherwise it has only the dependencies that it has edges with. 
+Main function for querying the data is **pkgquery**:
+`pkgquery(graph, packet_name, pkgfile, verflag)`
 It receives *graph* - Graphviz API class that is used for graph declaration  
 *packet_name* - string that contains packet name. It is written by the user, and is used in graph's root. **Note**: For example, python-3 or LibreOffice packets use multiple spec files. That's why it is important to receive name from the user, because it may be unclear what spec has the right name for the packet.  
-*filename* - name of the file that had been made by the script. Should be synced with graph's purpose (br.out for build requirements, r.out for runtime requirements)
+*pkgfile* - name of the file that had been made by the script. Has everything needed for querying: BuildRequires, Requires, %package.
 *verflag* - flag for labeling the edges with the versions of required packets instead of leaving it in the nodes. For example, *cmake-data = 3.28.3-7* with verflag = True will be transformed into **"cmake-data" node** and **"= 3.28.3-7" label** on the edge.  
-Also, if there is a condition for having a requirement, for example, *(cmake-rpm-macros = 3.28.3-7 if rpm-build)*, then the parentheses are removed, and future result depends on verflag, mentioned before.
+**Note 1** If there is a condition for having a requirement, for example, *(cmake-rpm-macros = 3.28.3-7 if rpm-build)*, then the parentheses are removed, and future result depends on verflag, mentioned before.  
+**Note 2** You may turn on the option to make edges from subpackages to main package dependencies just by removing ''' (commentary), but it is not recommended at all. Graphs of huge applications will be awful and non-informative.  
 
 ## Containers
 The container has OS of the distributive written in $container_name. The container has everything from the Container directive and it should be launched in that directive. Besides setting up the container, everything is the same as for Direct usage, you just work inside the container's distributive. Everything for working with the container is described below.  

@@ -1,7 +1,5 @@
 run:
 	./script.sh
-	rm r.out
-	rm br.out
 
 png:
 	xdg-open build_requires.png
