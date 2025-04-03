@@ -9,6 +9,12 @@ graph:
 	xdg-open build_requires
 	xdg-open runtime_requires
 
+dockrun:
+	sudo ./run.sh
+
+dockcp:
+	sudo ./copy.sh
+
 clean:
 	rm build_requires
 	rm runtime_requires

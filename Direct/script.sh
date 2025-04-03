@@ -15,6 +15,7 @@ if [ "$char" == "d" ]; then
 	if [ -e $dirname ]; then
 		cd "$dirname"
 
+		rm $curdir/pkg.out
 		for filename in ./*.spec
 		do
 			echo "Processing $filename file..."
