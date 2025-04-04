@@ -2,9 +2,9 @@ from graphviz import Digraph, unflatten
 from pathlib import Path
 
 
-def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка графа graph с корнем packet_name и узлами из файла filename
-    # verflag - флаг, говорящий о том, пишем ли мы версии зависимостей на рёбрах графа или просто ничего не трогаем
-    graph.node('packet', packet_name, shape='egg', color='blue')
+def pkgquery(graph, app_name, pkgfile, verflag): # Querying graph "graph" with "app_name" root node and edges from "filename" file
+    # verflag is a flag that tells us if we are writing versions and conditions above the edges of the graph or leave them in nodes
+    graph.node('packet', app_name, shape='egg', color='blue')
 
     file = open(pkgfile, 'r')
     graph.attr('node', shape='box', color='green')
@@ -15,25 +15,33 @@ def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка гра�
     br = "BuildRequires"
     rr = "Requires"
     pm = "%package"
-    newspec = "%mainpackage" # Наша договорённость о том, как отмечаются в pkg.out новые spec файлы
-    speccount = 0 # Количество обработанных spec файлов. Имеет роль для директив с 2 и более spec файлами, иначе не влияет
+    newspec = "%mainpackage" # Our agreement about the new spec file start labeling in filename
+    newname = "Name"
+    package_name = app_name # May be changed (if met "Name:")
+    speccount = 0 # Number of queried spec files. Makes sense for directories with 2 and more specs
 
     parsed = file.readlines()
 
-    pkg = packet_name
+    # Getting first name
+    firstline = parsed[0]
+    if firstline.startswith(newname):
+        firstline = firstline[len(newname) + 1:]  # Getting rid of newname string and :
+        firstline = firstline.strip()
+        package_name = firstline
+
+    pkg = package_name
     graph.node('p0', pkg, shape='egg', color='red')
     graph.edge('packet', 'p0', "main package")
-    pkgid = 0 # Сначала идёт += 1 => первый айди в проге далее будет 1
+    pkgid = 0 # Id for the first main package
     pkgnode = 'p0'
 
-
     '''
-    # ВНИМАНИЕ! ТО, ЧТО В АПОСТРОФАХ, - ОСОБЫЙ ФУНКЦИОНАЛ
-    # По стандарту RPM spec файлов, если у нас есть подпакет, и у него какое-либо описание ПУСТОЕ (в частности, нам нужные
-    # BuildRequires и Requires), то это описание у него ТАКОЕ ЖЕ, как у главного пакета
-    # Эта опция реализует это в графе, но предупреждение: это делает граф визуально убийственным. Если хотите - уберите
-    # апострофы, где они есть.
-    # Обычно же, без этой опции, подразумевается, что "пустой" подпакет <=> все зависимости из главного пакета
+    # EVERYTHING THAT IS IN TRIPLE ' IS SPECIAL
+    # According to RPM spec files standard, if you have a subpackage, and if any of its fields is EMPTY (particularly 
+    # BuildRequires & Requires) then that field will be THE SAME AS THE MAIN PACKAGE'S ONE 
+    # That option is turned off there, because it makes graph inconvenient as hell. If you wish to turn it on, delete
+    # the triple ' everywhere you see them
+    # Otherwise it is meant that subpackage without dependency edges has the same dependencies as the main package
     mainlst = []
     mainpkgnode = 'p1'
     reqcount = 0
@@ -41,32 +49,32 @@ def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка гра�
 
     for line in parsed:
         if (line.startswith(br)) and graphname == "build_requires":
-            line = line[len(br):] # Избавляемся от строки br
-            if line.startswith('('):  # Получаем комментарий (метка на ребре)
+            line = line[len(br):] # Getting rid of br string
+            if line.startswith('('):  # Getting the conditions
                 ind = line.find(')')
                 comment = line[1:ind]
                 line = line[ind + 1:]
             else:
                 comment = str()
 
-            line = line[1:]  # Избавляемся от :
+            line = line[1:]  # Getting rid of :
 
             line = line.strip()
-            if (line.startswith("(")) and (line.endswith(")")): # Удаляем некрасивые скобки при условиях
+            if (line.startswith("(")) and (line.endswith(")")): # Deleting excessive parentheses
                 line = line[1:-1]
 
-            if verflag:  # Хотим указывать версии на рёбрах
-                ind = line.find(' ')  # Версии зависимостей указывают после пробела
-                if ind != -1:  # Указана версия
-                    version = line[(ind + 1):]  # Запоминаем версию
-                    line = line[:ind]  # Забываем обо всём до пробела (включительно)
+            if verflag:  # If we want to put conditions on edges
+                ind = line.find(' ')  # Versions of conditions are written after whitespace
+                if ind != -1:  # Found condition
+                    version = line[(ind + 1):]  # Remember it
+                    line = line[:ind]  # Save everything until the whitespace
                     graph.node(str(i), line)
-                    comment += '\n' + version  # Делаем пометку на ребре о версии
-                else:  # Версия не указана
+                    comment += '\n' + version  # Making label on the edge
+                else:  # No condition found
                     graph.node(str(i), line)
 
                 graph.edge(pkgnode, str(i), comment)
-            else:
+            else: # Conditions inside the node
                 graph.node(str(i), line)
                 graph.edge(pkgnode, str(i), comment)
             '''
@@ -78,28 +86,28 @@ def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка гра�
             i += 1
 
         elif (line.startswith(rr)) and graphname == "runtime_requires":
-            line = line[len(rr):] # Избавляемся от строки rr
-            if line.startswith('('):  # Получаем комментарий (метка на ребре)
+            line = line[len(rr):] # Getting rid of rr string
+            if line.startswith('('):  # Getting the conditions
                 ind = line.find(')')
                 comment = line[1:ind]
                 line = line[ind + 1:]
             else:
                 comment = str()
 
-            line = line[1:]  # Избавляемся от :
+            line = line[1:]  # Getting rid of :
 
             line = line.strip()
-            if (line.startswith("(")) and (line.endswith(")")): # Удаляем некрасивые скобки при условиях
+            if (line.startswith("(")) and (line.endswith(")")): # Deleting excessive parentheses
                 line = line[1:-1]
 
-            if verflag:  # Хотим указывать версии на рёбрах
-                ind = line.find(' ')  # Версии зависимостей указывают после пробела
-                if ind != -1:  # Указана версия
-                    version = line[(ind + 1):]  # Запоминаем версию
-                    line = line[:ind]  # Забываем обо всём до пробела (включительно)
+            if verflag:  # If we want to put conditions on edges
+                ind = line.find(' ')  # Versions of conditions are written after whitespace
+                if ind != -1:  # Found condition
+                    version = line[(ind + 1):]  # Remember it
+                    line = line[:ind]  # Save everything until the whitespace
                     graph.node(str(i), line)
-                    comment += '\n' + version  # Делаем пометку на ребре о версии
-                else:  # Версия не указана
+                    comment += '\n' + version  # Making label on the edge
+                else:  # No condition found
                     graph.node(str(i), line)
 
                 graph.edge(pkgnode, str(i), comment)
@@ -117,14 +125,14 @@ def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка гра�
 
         elif line.startswith(pm):
             '''
-            if reqcount == 0: # Предыдущий пакет не добавил ни одной зависимости, значит всё как у main
+            if reqcount == 0: # Previous package had no dependency described <=> everything from mainpackage
                 for elem in mainlst:
                     graph.edge(pkgnode, elem[0], elem[1])
 
             reqcount = 0
             '''
 
-            line = line[len(pm):] # Избавляемся от строки pm
+            line = line[len(pm):] # Getting rid of pm string
             line = line.lstrip()
             ind = line.find('-n')
             if ind != -1:
@@ -133,7 +141,7 @@ def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка гра�
                 pkg = line
             else:
                 line = line.rstrip()
-                pkg = f'{packet_name}-{line}'
+                pkg = f'{package_name}-{line}'
 
             pkgid += 1
             pkgnode = f'p{pkgid}'
@@ -143,7 +151,7 @@ def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка гра�
         elif line.startswith(newspec):
             if speccount != 0:
                 pkgid += 1
-                pkg = f'{packet_name}:{speccount}'
+                pkg = f'{package_name}'
                 pkgnode = f'p{pkgid}'
                 graph.node(pkgnode, pkg, shape='egg', color='red')
                 graph.edge('packet', pkgnode, f"main package:{speccount}")
@@ -154,39 +162,44 @@ def pkgquery(graph, packet_name, pkgfile, verflag): # Обработка гра�
                 '''
 
             speccount += 1
+
+        elif line.startswith(newname):
+            line = line[len(newname)+1:] # Getting rid of newname string and :
+            line = line.strip()
+            package_name = line
+
         else:
             continue
 
 
     graph.attr(rankdir='LR')
-    # numrow = round(i / 10)# Количество рядов в отображении
+    # numrow = round(i / 10) # Number of words in dependencies, if you wish to change unflatten scatter parameter
     out = graph.unflatten()
 
-    # Выводим граф в файл и на экран
-    output_path = out.render(filename=f'{graph.name}', view=True)  # Создаём в качестве файла наш граф
-
-    print("Был создан граф:", output_path)
+    # Outputting the graph and showing it
+    output_path = out.render(filename=f'{graph.name}', view=True)  # Grapviz graph -> 2 files (DOT and png)
+    print("The graph was created. Its path:", output_path)
 
 
 
 brgraph = Digraph(
-        name='build_requires',  # Название графа
+        name='build_requires',  # Graph name
         comment='Отражение необходимостей для сборки пакета',
-        format='png',  # Формат на выходе
-        engine='dot'  # Движок для визуализации
+        format='png',  # Format of output
+        engine='dot'  # Visualization engine
 )
 
 rgraph = Digraph(
-        name='runtime_requires',  # Название графа
+        name='runtime_requires',  # Graph name
         comment='Отражение необходимостей для работы пакета',
-        format='png',  # Формат на выходе
-        engine='dot'  # Движок для визуализации
+        format='png',  # Format of output
+        engine='dot'  # Visualization engine
 )
 
 
-print("Введите название пакета: ")
-packet_name = input()
+print("Write the name of the app: ")
+app_name = input()
 pkgfile = Path("./pkg.out")
 
-pkgquery(brgraph, packet_name, pkgfile, True)
-pkgquery(rgraph, packet_name, pkgfile, True)
+pkgquery(brgraph, app_name, pkgfile, True)
+pkgquery(rgraph, app_name, pkgfile, True)

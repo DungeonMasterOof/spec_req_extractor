@@ -19,6 +19,8 @@ if [ "$char" == "d" ]; then
 		for filename in ./*.spec
 		do
 			echo "Processing $filename file..."
+			rpmspec -P $filename | grep -e Name >> $curdir/pkg.out
+
 			echo "%mainpackage" >> $curdir/pkg.out
 			# That's our label to show that the new spec file is processed
 			rpmspec -P $filename | grep -e %package -e BuildRequires -e Requires >> $curdir/pkg.out
@@ -37,7 +39,7 @@ elif [ "$char" == "f" ]; then
 		filedir=$(dirname $(realpath "$filename"))
 		cd $filedir
 		filename=$(basename "$filename")
-		rpmspec -P $filename | grep -e %package -e BuildRequires -e Requires > $curdir/pkg.out
+		rpmspec -P $filename | grep -e %package -e Name -e BuildRequires -e Requires > $curdir/pkg.out
 		cd $curdir
 	else
 		echo "Error: $filename does not exist."

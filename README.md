@@ -80,7 +80,7 @@ You may read about the graph format just there.
 ### Graph format
 After running the program, you will receive graphs in DOT and png formats.  
 **Main node:** The main node (root node) has blue color and the name of the package that you have written before. The edges from it go to the subpackages of the spec file(s). If it has a label `main package:{index}`, it means, that it is main package (not described by %package) in the ({index}+1) spec file.  
-**Subpackages and main package:** The nodes after the root node have red color and the names that are described in spec file(s). If the node describes main package, it will have the name of the package with index: `{package_name}:{index}`. They have edges that lead to their dependencies. If the node describes
+**Subpackages and main package:** The nodes after the root node have red color and the names that are described in spec file(s). If the node describes main package, it will have the name of the package with index: `{package_name}`. They have edges that lead to their dependencies. If the node describes
 subpackage and does not have any edges, it is meant that the subpackage has **the same dependencies as its main package**.  
 **Dependencies:** The nodes after the packages nodes describe packages' dependencies. These nodes have box shape and green color. The edges leading to them may have labels that describe conditions of the dependency (such as version; mode, where the dependency is needed).  
 
