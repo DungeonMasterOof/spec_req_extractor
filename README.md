@@ -1,4 +1,8 @@
 # Spec data extractor
+**IMPORTANT NOTE!!! This branch is the sequel of the program, and the new version has:**
+**1) The graph will be recursive! So every dependency or package that is used in other package may be connected with an edge.**  
+**2) The option of connecting subpackages (that have no buildrequires / requires fields) is now enabled.**  
+
 The main goal of the program is to extract requirements and build requirements fields from a spec file or a set of spec files (located in one directory). They will be described as two graphs as the result of the program. Graphs will be directed and will show main package and subpackages dependencies. **IMPORTANT: If a subpackage does not have any edges, it is meant that it has the same dependencies as the main package (RPM standard). See task.py for more info.** Finally, there is a Makefile to make everything simpler and more convenient.  
 You may notice two directives: Direct and Container. Direct is the lighter version of the program but is less unified. It just uses your system, your system's macro definitions in particular. Container directive is more sophisticated and uses Docker containers with set image.  
 **Note: If you want to change the image (depends on your rpm packets), you should change ${container_name} in *run.sh* and *copy.sh* and change image in *Dockerfile*. You should have respective image installed.**  

@@ -7,10 +7,11 @@ def pkgquery(graph, app_name, pkgfile, verflag): # Querying graph "graph" with "
     graph.node('packet', app_name, shape='egg', color='blue')
 
     file = open(pkgfile, 'r')
-    graph.attr('node', shape='box', color='green')
+    graph.attr('node', shape='egg', color='red')
 
     graphname = graph.name
-    i = 0
+
+
 
     br = "BuildRequires"
     rr = "Requires"
@@ -29,13 +30,16 @@ def pkgquery(graph, app_name, pkgfile, verflag): # Querying graph "graph" with "
         firstline = firstline.strip()
         package_name = firstline
 
-    pkg = package_name
-    graph.node('p0', pkg, shape='egg', color='red')
-    graph.edge('packet', 'p0', "main package")
-    pkgid = 0 # Id for the first main package
-    pkgnode = 'p0'
+    existset = set()
+    existtable = []
 
-    '''
+    pkg = package_name
+    graph.node('0', pkg, shape='egg', color='red')
+    existset.add(pkg)
+    existtable.append([pkg, '0'])
+    graph.edge('packet', '0', "main package")
+    pkgnode = '0'
+
     # EVERYTHING THAT IS IN TRIPLE ' IS SPECIAL
     # According to RPM spec files standard, if you have a subpackage, and if any of its fields is EMPTY (particularly 
     # BuildRequires & Requires) then that field will be THE SAME AS THE MAIN PACKAGE'S ONE 
@@ -43,9 +47,10 @@ def pkgquery(graph, app_name, pkgfile, verflag): # Querying graph "graph" with "
     # the triple ' everywhere you see them
     # Otherwise it is meant that subpackage without dependency edges has the same dependencies as the main package
     mainlst = []
-    mainpkgnode = 'p1'
+    mainpkgnode = '0'
     reqcount = 0
-    '''
+    i = 1
+    result = ''
 
     for line in parsed:
         if (line.startswith(br)) and graphname == "build_requires":
@@ -68,22 +73,42 @@ def pkgquery(graph, app_name, pkgfile, verflag): # Querying graph "graph" with "
                 if ind != -1:  # Found condition
                     version = line[(ind + 1):]  # Remember it
                     line = line[:ind]  # Save everything until the whitespace
-                    graph.node(str(i), line)
                     comment += '\n' + version  # Making label on the edge
-                else:  # No condition found
-                    graph.node(str(i), line)
 
-                graph.edge(pkgnode, str(i), comment)
+                if line not in existset:
+                    graph.node(str(i), line)
+                    existset.add(line)
+                    existtable.append([line, str(i)])
+                    where = str(i)
+                    if pkgnode == mainpkgnode:  # Main package
+                        mainlst.append([str(i), comment])
+
+                    i += 1
+                else:
+                    result = list(filter(lambda x: x[0] == line, existtable)) # [[line, id]]
+                    where = result[0][1]
+
+                graph.edge(pkgnode, where, comment)
+
             else: # Conditions inside the node
-                graph.node(str(i), line)
-                graph.edge(pkgnode, str(i), comment)
-            '''
-            if pkgnode == mainpkgnode:  # Main package
-                mainlst.append([str(i), comment])
+                if line not in existset:
+                    graph.node(str(i), line)
+                    existset.add(line)
+                    existtable.append([line, str(i)])
+                    where = str(i)
+                    if pkgnode == mainpkgnode:  # Main package
+                        mainlst.append([str(i), comment])
+
+                    i += 1
+                else:
+                    result = list(filter(lambda x: x[0] == line, existtable)) # [[line, id]]
+                    where = result[0][1]
+
+                graph.edge(pkgnode, where, comment)
+
 
             reqcount += 1
-            '''
-            i += 1
+            #print('New br:', pkg)
 
         elif (line.startswith(rr)) and graphname == "runtime_requires":
             line = line[len(rr):] # Getting rid of rr string
@@ -105,32 +130,48 @@ def pkgquery(graph, app_name, pkgfile, verflag): # Querying graph "graph" with "
                 if ind != -1:  # Found condition
                     version = line[(ind + 1):]  # Remember it
                     line = line[:ind]  # Save everything until the whitespace
-                    graph.node(str(i), line)
                     comment += '\n' + version  # Making label on the edge
-                else:  # No condition found
+
+                if line not in existset:
                     graph.node(str(i), line)
+                    existset.add(line)
+                    existtable.append([line, str(i)])
+                    where = str(i)
+                    if pkgnode == mainpkgnode:  # Main package
+                        mainlst.append([str(i), comment])  # Adding to a list
+                    i += 1
+                else:
+                    result = list(filter(lambda x: x[0] == line, existtable))  # [[line, id]]
+                    where = result[0][1]
 
-                graph.edge(pkgnode, str(i), comment)
+                graph.edge(pkgnode, where, comment)
             else:
-                graph.node(str(i), line)
-                graph.edge(pkgnode, str(i), comment)
+                if line not in existset:
+                    graph.node(str(i), line)
+                    existset.add(line)
+                    existtable.append([line, str(i)])
+                    where = str(i)
+                    if pkgnode == mainpkgnode:  # Main package
+                        mainlst.append([str(i), comment])  # Adding to a list
+                    i += 1
+                else:
+                    result = list(filter(lambda x: x[0] == line, existtable))  # [[line, id]]
+                    where = result[0][1]
 
-            '''
-            if pkgnode == mainpkgnode:  # Main package
-                mainlst.append([str(i), comment]) # Adding to a list
+                graph.edge(pkgnode, where, comment)
 
             reqcount += 1
-            '''
-            i += 1
+            #print('New rr:', pkg)
+
 
         elif line.startswith(pm):
-            '''
+
             if reqcount == 0: # Previous package had no dependency described <=> everything from mainpackage
                 for elem in mainlst:
                     graph.edge(pkgnode, elem[0], elem[1])
 
             reqcount = 0
-            '''
+
 
             line = line[len(pm):] # Getting rid of pm string
             line = line.lstrip()
@@ -143,23 +184,47 @@ def pkgquery(graph, app_name, pkgfile, verflag): # Querying graph "graph" with "
                 line = line.rstrip()
                 pkg = f'{package_name}-{line}'
 
-            pkgid += 1
-            pkgnode = f'p{pkgid}'
-            graph.node(pkgnode, pkg, shape='egg', color='red')
-            graph.edge('packet', pkgnode)
+            if pkg not in existset:
+                graph.node(str(i), pkg)
+                existset.add(pkg)
+                existtable.append([pkg, str(i)])
+                where = str(i)
+                graph.edge('packet', where)
+                i += 1
+            else:
+                result = list(filter(lambda x: x[0] == pkg, existtable))  # [[line, id]]
+                where = result[0][1]
+
+            pkgnode = where
+            #print('New packet:', pkg)
 
         elif line.startswith(newspec):
             if speccount != 0:
-                pkgid += 1
-                pkg = f'{package_name}'
-                pkgnode = f'p{pkgid}'
-                graph.node(pkgnode, pkg, shape='egg', color='red')
-                graph.edge('packet', pkgnode, f"main package:{speccount}")
+                if reqcount == 0:  # Previous package had no dependency described <=> everything from mainpackage
+                    for elem in mainlst:
+                        graph.edge(pkgnode, elem[0], elem[1])
 
-                '''
-                mainpkgnode = pkgnode
+                reqcount = 0
+
+                pkg = f'{package_name}'
+                pkgnode = str(i)
+
+                if pkg not in existset:
+                    graph.node(pkgnode, pkg, shape='egg', color='red')
+                    existset.add(pkg)
+                    existtable.append([pkg, pkgnode])
+                    where = pkgnode
+                    i += 1
+                else:
+                    result = list(filter(lambda x: x[0] == pkg, existtable))  # [[line, id]]
+                    where = result[0][1]
+
+                graph.edge('packet', where, f"main package:{speccount}")
+
+                pkgnode = where
+                mainpkgnode = where
                 mainlst.clear()
-                '''
+
 
             speccount += 1
 
@@ -168,16 +233,15 @@ def pkgquery(graph, app_name, pkgfile, verflag): # Querying graph "graph" with "
             line = line.strip()
             package_name = line
 
-        else:
-            continue
 
 
     graph.attr(rankdir='LR')
     # numrow = round(i / 10) # Number of words in dependencies, if you wish to change unflatten scatter parameter
     out = graph.unflatten()
 
-    # Outputting the graph and showing it
-    output_path = out.render(filename=f'{graph.name}', view=True)  # Grapviz graph -> 2 files (DOT and png)
+    # Outputting the graph
+    output_path = out.render(filename=f'{graph.name}')  # Grapviz graph -> 2 files (DOT and png)
+    # WE WILL COPY THE FILES FROM THE CONTAINER SO DON'T SHOW GRAPH
     print("The graph was created. Its path:", output_path)
 
 
